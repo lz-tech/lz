@@ -1,0 +1,375 @@
+<apex:page controller="calendarV3Controller" applyBodyTag="false">
+    <!-- ■FullCalendarライブラリのインクルード -->
+    <apex:stylesheet value="{!URLFOR($Resource.fullcalendarV390, 'fullcalendar-3.9.0/fullcalendar.css')}" />
+    <apex:stylesheet value="{!URLFOR($Resource.jqueryUiThemes, 'jquery-ui-themes-1.12.1/jquery-ui.min.css')}" />
+    <apex:includeScript value="{!URLFOR($Resource.fullcalendarV390, 'fullcalendar-3.9.0/lib/jquery.min.js')}" />
+    <apex:includeScript value="{!URLFOR($Resource.fullcalendarV390, 'fullcalendar-3.9.0/lib/jquery-ui.min.js')}" />
+    <apex:includeScript value="{!URLFOR($Resource.fullcalendarV390, 'fullcalendar-3.9.0/lib/moment.min.js')}" />
+    <apex:includeScript value="{!URLFOR($Resource.fullcalendarV390, 'fullcalendar-3.9.0/fullcalendar.js')}" />
+    <apex:includeScript value="{!URLFOR($Resource.fullcalendarV390, 'fullcalendar-3.9.0/locale-all.js')}" />
+
+    <script type="text/javascript">
+        $(document).ready(function() {
+            loadCalendar();
+            initListView();
+            initModal();
+        });
+
+        function loadCalendar(){
+            $('#fullcalendarjs').fullCalendar({
+                locale: 'ja',                           //日本ロケール
+                editable: true,                         //編集可
+                droppable: true,                        //外部要素からのドラッグアンドドロップを可にする
+                eventLimit: true,                       //表示するイベントの上限値
+                displayEventTime: false,                //チップ時間表示
+                firstDay: 1,                            //月曜日開始
+                timeFormat: 'HH:mm',                    //時間表示フォーマット
+                slotLabelFormat: 'HH:mm',              //スロットラベル時間フォーマット
+                //            defaultView: viewMode,                  //ディフォルトカレンダー（月）
+                //            defaultDate: currentDate,              //ディフォルト日
+                defaultTimedEventDuration: '00:30:00',  //チップ時間間隔
+                scrollTime: '09:00:00',                 //初期Scroll位置
+                minTime: "00:00:00",                    //時間範囲Min
+                maxTime: "23:59:59",                    //時間範囲Max
+                nowIndicator: true,                     //現在時刻のライン表示
+                eventOrder: "tipOrder",                 //並び順
+                //           height: getCalendarHeight,
+                //Fullカレンダーヘッダー表示内容宣言
+                header: {
+                    left: 'month, agendaWeek, agendaDay',
+                    center: 'title',
+                    right: 'today,prev,next '
+                },
+                views: {
+                    month: {
+                        columnFormat: 'ddd',
+                        titleFormat: "YYYY年 M月"
+                    },
+                    week: {
+                        columnFormat: 'D ddd',
+                        titleFormat: "YYYY年 M月 D日"
+                    },
+                    day: {
+                        columnFormat: 'ddd',
+                        titleFormat: "YYYY年 M月 D日"
+                    },
+                },
+                //Fullカレンダーの日枠、時間枠をクリックイベント
+                dayClick: function (date, jsEvent, view) {
+                    console.log("dayClick start:" + date);
+                    console.log("dayClick end");
+                },
+                //Fullカレンダー描画イベント
+                viewRender: function (view, element) {
+                },
+                //外部要素からドラッグアンドドロップしたときに実行
+                drop: function (date, jsEvent, ui, resourceId) {
+                    console.log("drop start:" + date);
+                    var targetId = $(this).data("event");
+                    console.log("targetId:" + targetId);
+                    openModalYotei(targetId, date);
+                    console.log("drop end");
+                },
+                //カレンダー内でのドロップ イベント
+                eventDrop: function (event, delta, revertFunc, jsEvent, ui, view) {
+                    console.log("eventDrop start:" + delta);
+                    console.log("eventDrop end");
+                },
+                //チップサイズ変更イベント
+                eventResize: function (event, delta, revertFunc, jsEvent, ui, view) {
+                },
+                // カレンダーチップをクリックイベント
+                eventClick: function (event, jsEvent, view) {
+                    console.log("eventClick start");
+                    openModalKekka(event.id, event.title);
+                    console.log("eventClick end");
+                },
+                eventMouseover: function (event, jsEvent, view) {
+                },
+                eventMouseout: function (data, event, view) {
+                },
+                events: [
+                    <apex:repeat value="{!tasks}" var="task" >
+                        {
+                            id: '{!task.Id}',
+                            title: '{!task.Subject}',
+                            start: '{!task.ActivityDate}'
+                        },
+                    </apex:repeat>
+
+                ]
+            });
+        }
+
+        // 活動種類の制御
+        $('#' + $.escapeSelector('{!$Component.mainform.targetAttackType}')).change(function(){
+            consloe.log("change targetAttackType:" + $(this).val());
+            var val = $(this).val();
+        });
+
+        // リストビューの制御
+        function initListView() {
+            console.log("initListView start");
+            eventChip = $('div.event-chip');
+            eventChip.each(function() {
+                console.log(this);
+                $(this).draggable({
+                    cursor: "pointer",
+                    helper: "clone",
+                    scroll: false,
+                    opacity: '0.5',
+                    zIndex: 998,
+                    appendTo: 'body',
+                    revert: true,
+                    revertDuration: 0,
+                    start: function(event, ui) {
+                        // このタイミングでデータを表示しても良いかも
+                    }
+                });
+            });
+            
+            console.log("initListView end");
+        }
+
+        // モーダル
+        function initModal() {
+            $("#dialog-modal-Yotei2").dialog({
+                modal: true,
+                autoOpen: false,
+                width: 800,
+                buttons: {
+                    "確定": function() {
+                        $(this).dialog("close");
+                        // actionfunctionの呼び出し
+                        //refreshParent();
+                        console.log("insertYotei start");
+
+                        var yoId = $('#' + $.escapeSelector('{!$Component.mainform.yoId}')).val();
+                        var yoTdate = $('#' + $.escapeSelector('{!$Component.mainform.yoTdate}')).val();
+                        var yoStime = $('#' + $.escapeSelector('{!$Component.mainform.yoStime}')).val();
+                        var yoEtime = $('#' + $.escapeSelector('{!$Component.mainform.yoEtime}')).val();
+                        var yoFSatei = $('#' + $.escapeSelector('{!$Component.mainform.yoFSatei}')).prop('checked');
+                        var yoFMitumori = $('#' + $.escapeSelector('{!$Component.mainform.yoFMitumori}')).prop('checked');
+                        var yoFSijo = $('#' + $.escapeSelector('{!$Component.mainform.yoFSijo}')).prop('checked');
+                        var yoFRaiten = $('#' + $.escapeSelector('{!$Component.mainform.yoFRaiten}')).prop('checked');
+                        console.log(yoFSatei);
+                        console.log(yoFMitumori);
+                        console.log(yoFSijo);
+                        console.log(yoFRaiten);
+                        insertYotei(yoId, yoTdate, yoStime, yoEtime, yoFSatei, yoFMitumori, yoFSijo, yoFRaiten);
+                    },
+                    "キャンセル": function() {
+                        $(this).dialog("close");
+                    }
+                }
+            });
+            $("#dialog-modal-Kekka2").dialog({
+                modal: true,
+                autoOpen: false,
+                width: 800,
+                buttons: {
+                    "確定": function() {
+                        $(this).dialog("close");
+                        // actionfunctionの呼び出し
+                        var keId = $('#keId').val();
+                        var keEnd = $('#keEnd').prop('checked');
+                        var keSatei = $('#keSatei').prop('checked');
+                        var keRaiten = $('#keRaiten').prop('checked');
+                        var keMemo = $('#keMemo').val();
+                        var keJikai = $('#keJikai').val();
+                        saveKekka(keId, keEnd, keSatei, keRaiten, keMemo, keJikai);
+                    },
+                    "キャンセル": function() {
+                        $(this).dialog("close");
+                    }
+                }
+            });
+        }
+        function openModalYotei(targetId, date) {
+            console.log("openModalYotei start:" + targetId + "/" + date);
+
+            var fDate = $.fullCalendar.formatDate(date, "YYYY/MM/DD");
+            $('#yoteiTargetId').val(targetId);
+            $('#yoteiTargetId').text(targetId);
+            $('#yoteiTargetDate').val(date);
+            $('#yoteiTargetDate').text(date);
+            
+            $('#' + $.escapeSelector('{!$Component.mainform.yoId}')).val(targetId);
+            $('#' + $.escapeSelector('{!$Component.mainform.yoTdate}')).val(fDate);
+
+            $('#dialog-modal-Yotei2').dialog('open');
+        }
+        function openModalKekka(targetId, subject) {
+            $('#keId').val(targetId);
+            $('#keSubject').text(subject);
+            $('#dialog-modal-Kekka2').dialog('open');
+        }
+    </script>
+    <body>
+        <apex:slds />
+        <div class="slds-scope">
+            <apex:form id="mainform">
+                <div class="slds-grid slds-gutters">
+                    <div class="slds-col slds-size_1-of-4">
+                        <apex:selectList size="1" id="targetAttackType">
+                            <apex:selectOptions value="{!targetTypeOptions}"/>
+                        </apex:selectList><p/>
+                        <div class="slds-scrollable--y" style="height:400px">
+                            <apex:variable var="targetAttackListIndex" value="0" />
+                            <apex:repeat value="{!targetAttackLists}" var="attacList" id="targetAttackLists">
+                                <apex:variable var="targetAttackListClass" value="{!IF(targetAttackListIndex=='0','slds-has-bottom-magnet', 'slds-has-top-magnet')}"/>
+                                <div class="event-chip slds-card {!targetAttackListClass} slds-box slds-theme_shade" data-event="{!attacList.id}">
+                                    <div class="slds-p-around_medium">{!attacList.name}</div>
+                                </div>
+                                <apex:variable var="targetAttackListIndex" value="{!(VALUE(targetAttackListIndex)+1)}"/>
+                            </apex:repeat>
+                            <div class="event-chip slds-card slds-has-bottom-magnet">
+                                <div class="slds-p-around_medium">chip01</div>
+                            </div>
+                            <div class="event-chip slds-card slds-has-top-magnet">
+                                <div class="slds-p-around_medium">chip02</div>
+                            </div>
+                            <div class="event-chip slds-card slds-has-top-magnet">
+                                <div class="slds-p-around_medium">chip0x</div>
+                            </div>
+                            <div class="event-chip slds-card slds-has-top-magnet">
+                                <div class="slds-p-around_medium">chip0x</div>
+                            </div>
+                            <div class="event-chip slds-card slds-has-top-magnet">
+                                <div class="slds-p-around_medium">chip0x</div>
+                            </div>
+                            <div class="event-chip slds-card slds-has-top-magnet">
+                                <div class="slds-p-around_medium">chip0x</div>
+                            </div>
+                            <div class="event-chip slds-card slds-has-top-magnet">
+                                <div class="slds-p-around_medium">chip0x</div>
+                            </div>
+                            <div class="event-chip slds-card slds-has-top-magnet">
+                                <div class="slds-p-around_medium">chip0x</div>
+                            </div>
+                            <div class="event-chip slds-card slds-has-top-magnet">
+                                <div class="slds-p-around_medium">chip0x</div>
+                            </div>
+                            <div class="event-chip slds-card slds-has-top-magnet">
+                                <div class="slds-p-around_medium">chip0x</div>
+                            </div>
+                            <div class="event-chip slds-card slds-has-top-magnet">
+                                <div class="slds-p-around_medium">chip0x</div>
+                            </div>
+                            <div class="event-chip slds-card slds-has-top-magnet">
+                                <div class="slds-p-around_medium">chip0x</div>
+                            </div>
+                            <div class="event-chip slds-card slds-has-top-magnet">
+                                <div class="slds-p-around_medium">chip0x</div>
+                            </div>
+                            <div class="event-chip slds-card slds-has-top-magnet">
+                                <div class="slds-p-around_medium">chip0x</div>
+                            </div>
+                            <div class="event-chip slds-card slds-has-top-magnet">
+                                <div class="slds-p-around_medium">chip03</div>
+                            </div>
+                        </div>
+                        <div class="slds-card">
+                            <div id="actionTarget" class="slds-p-around_medium" />
+                        </div>
+                        <div class="slds-section ">
+                            <h3 class="slds-section__title slds-theme_shade ">SectionTitle</h3>
+                            <div class="slds-section__content slds-m-bottom_medium ">memo!</div>
+                        </div>
+                        <table class="slds-table slds-table_cell-buffer slds-table_bordered ">
+                            <thead>
+                                <tr>
+                                    <th><div class="slds-truncate ">title01</div></th>
+                                    <th><div class="slds-truncate ">title02</div></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="slds-hint-parent ">
+                                    <td><div class="slds-truncate ">AAA</div></td>
+                                    <td><div class="slds-truncate ">BBB</div></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div class="slds-hide">非表示</div>
+                        <div class="slds-show">表示</div>
+                        <div class="slds-show_inline-block ">インラインで表示</div>
+                    </div>
+                    <div class="slds-col slds-size_3-of-4">
+                        <div class="slds-card">
+                            <div id="fullcalendarjs"></div>
+                        </div>
+                    </div>
+                </div>
+
+
+
+                <!--モーダル-->
+                <div id="dialog-modal-Yotei2" title="活動予定入力">
+                    <apex:outputPanel id="dialogPanelYotei2">
+                        <!-- ここただのinputでいいんじゃ… -->
+                        ID：<apex:inputText value="{!yoDto.id}" id="yoId" /><br />
+                        予定日：<apex:inputText value="{!yoDto.targetDate}" id="yoTdate" /><br />
+                        開始時間：<apex:inputText value="{!yoDto.startTime}" id="yoStime" /><br />
+                        終了時間<apex:inputText value="{!yoDto.endTime}" id="yoEtime" /><br />
+                        査定：<apex:inputCheckbox value="{!yoDto.fSatei}" id="yoFSatei" /><br />
+                        見積：<apex:inputCheckbox value="{!yoDto.fMitumori}" id="yoFMitumori" /><br />
+                        試乗：<apex:inputCheckbox value="{!yoDto.fSijo}" id="yoFSijo" /><br />
+                        来店：<apex:inputCheckbox value="{!yoDto.fRaiten}" id="yoFRaiten" /><br />
+                    </apex:outputPanel>
+                </div>
+
+                 <apex:actionFunction name="insertYotei" action="{!insertYotei}" rerender="dialogPanelYotei2">
+                    <apex:param name="yoId" value=""  />
+                    <apex:param name="yoTdate" value=""  />
+                    <apex:param name="yoStime" value=""  />
+                    <apex:param name="yoEtime" value=""  />
+                    <apex:param name="yoFSatei" value=""  />
+                    <apex:param name="yoFMitumori" value=""  />
+                    <apex:param name="yoFSijo" value=""  />
+                    <apex:param name="yoFRaiten" value=""  />
+                </apex:actionFunction>
+
+
+
+                <!--モーダル-->
+                <div id="dialog-modal-Kekka2" title="活動結果入力or活動日変更">
+                    <apex:outputPanel id="dialogPanelKekka2">
+                        <input type="hidden" id="keId" /><br />
+                        活動名：<span id="keSubject" /><br />
+                        活動終了：<input type="checkbox" id="keEnd" /><br />
+                        査定：<input type="checkbox" id="keSatei" /><br />
+                        見積：<input type="checkbox" id="keMitumori" /><br />
+                        試乗：<input type="checkbox" id="keSijo" /><br />
+                        来店：<input type="checkbox" id="keRaiten" /><br />
+                        活動メモ：<input type="text" id="keMemo" /><br />
+                        次回活動日：<input type="text" id="keJikai" /><br />
+                    </apex:outputPanel>
+                </div>
+
+                 <apex:actionFunction name="saveKekka" action="{!saveKekka}" rerender="dialogPanelKekka2">
+                    <apex:param name="keId" value=""  />
+                    <apex:param name="keEnd" value=""  />
+                    <apex:param name="keSatei" value=""  />
+                    <apex:param name="keRaiten" value=""  />
+                    <apex:param name="keMemo" value=""  />
+                    <apex:param name="keJikai" value=""  />
+                </apex:actionFunction>
+
+            </apex:form>
+
+
+            <!--モーダル-->
+            <div id="dialog-modal-Yotei" title="ダイアログ">
+                <apex:outputPanel id="dialogPanelYotei">
+                    <c:KatudoYotei />
+                </apex:outputPanel>
+            </div>
+            <!--モーダル-->
+            <div id="dialog-modal-Kekka" title="ダイアログ">
+                <apex:outputPanel id="dialogPanelKekka">
+                    <c:KatudoKekka />
+                </apex:outputPanel>
+            </div>
+        </div>
+    </body>
+</apex:page>
