@@ -66,3 +66,32 @@ $ dir                          # 查看有哪些文件夹
 $ git rm -r --cached .idea     # 删除.idea文件夹
 $ git commit -m '删除.idea'    # 提交,添加操作说明
 $ git push -u origin master    # 将本次更改更新到github项目上去
+
+
+git撤销与回滚
+一.git commit之前
+未添加到暂存区的撤销(没有git add)
+git checkout -- new_src/app/Http/Controllers/Frontend/KyHome/KyHomeWordFilterTrait.php(文件路径)
+如果想将多个文件一次性撤销可以用
+git checkout -- .
+
+从暂存区撤销
+$ git status
+{ On branch master
+ Your branch is up to date with 'origin/master'.
+
+ Changes to be committed:
+  (use "git restore --staged <file>..." to unstage)
+        modified:   a.txt
+
+}
+git restore --staged a.txt (注意输出use的语句)
+git checkout -- a.txt
+
+二.git commit之后
+git revert 命令是撤销某次操作
+git log
+然后使用revert  后面跟上git提交的commitid
+git  revert 2842c8065322085c31fb7b8207b6296047c4ea3
+然后在推送到远端更新远程仓库代码，修改的文件就撤销回来了。
+注:revert奇数次生效，偶数次又回到之前的修改状态。比如一个文件内容是a，那么修改为ab，revert后文件变成了a，如果在revert后文件又还原成ab了
