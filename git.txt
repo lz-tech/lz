@@ -67,6 +67,11 @@ $ git rm -r --cached .idea     # 删除.idea文件夹
 $ git commit -m '删除.idea'    # 提交,添加操作说明
 $ git push -u origin master    # 将本次更改更新到github项目上去
 
+删除文件
+git rm a.txt
+git commit -m "a"
+git push origin master
+
 
 git撤销与回滚
 一.git commit之前
