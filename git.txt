@@ -1,0 +1,68 @@
+﻿如果想克隆，只需要行命令 git clone <url>
+
+提交到master
+          git add .
+          git commit -m "beizhu"
+          git push origin master 
+
+创建分支
+git branch develop
+查看本地分支
+注:名称前面加* 号的是当前的分支
+git branch
+查看远程分支
+加上-a参数可以查看远程分支，远程分支会用红色表示出来（如果你开了颜色支持的话）
+git branch -a
+切换分支
+git checkout branch_name
+删除本地分支
+git branch -d branch_name
+7.如果远程新建了一个分支，本地没有该分支。
+
+可以利用 git checkout --track origin/branch_name ，这时本地会新建一个分支名叫 branch_name ，会自动跟踪远程的同名分支 branch_name。
+git checkout --track origin/branch_name
+8.如果本地新建了一个分支 branch_name，但是在远程没有。
+
+这时候 push 和 pull 指令就无法确定该跟踪谁，一般来说我们都会使其跟踪远程同名分支，所以可以利用 git push --set-upstream origin branch_name ，这样就可以自动在远程创建一个 branch_name 分支，然后本地分支会 track 该分支。后面再对该分支使用 push 和 pull 就自动同步。
+
+git push --set-upstream origin branch_name
+9.合并分支到master上
+首先切换到master分支上
+git  checkout master
+如果是多人开发的话 需要把远程master上的代码pull下来
+git pull origin master
+然后我们把dev分支的代码合并到master上
+git  merge dev
+然后查看状态
+git status
+
+
+新建远程分支
+//本地创建新分支并切换到新分支
+$ git checkout -b feat
+//查看分支
+$ git branch
+//将此分支推送至远程分支（此时本地分支与远程分支名称相同）
+$ git push origin feat:feat
+//查看所有分支 
+$ git branch -a
+
+删除远程分支
+//法一： 讲一条空分支推送到远程
+$ git push origin :feat/xxx-xxx
+//法二： 删除指定分支
+$ git push origin --delete feat/xxx-xxx
+git branch -r -d origin/feat/xxx-xxx 
+
+
+
+删除文件夹
+$ git pull origin master       # 将远程仓库里面的项目拉下来
+
+
+$ dir                          # 查看有哪些文件夹
+
+
+$ git rm -r --cached .idea     # 删除.idea文件夹
+$ git commit -m '删除.idea'    # 提交,添加操作说明
+$ git push -u origin master    # 将本次更改更新到github项目上去
