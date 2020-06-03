@@ -1,0 +1,97 @@
+public with sharing class TS_User_Search_Ctrl extends BaseSearchController {
+    // コンポーネントで必ず表示する主オブジェクトの項目
+    private static List<String> PRIMARY_FIELDS = new List<String> { '' };
+
+    // 検索条件用フィールド
+    public String searchName { get; set; }
+    public String searchUserName { get; set; }
+    public User user { get; set; }
+    public String sampleText { get; private set; }
+
+    public TS_User_Search_Ctrl() {
+       
+        super(
+            Schema.SObjectType.User,     // 
+            Schema.SObjectType.Profile,     // 
+            'ProfileId',                    //
+            'SearchCondition', 
+            PRIMARY_FIELDS,                 // コンポーネントで必ず表示する主オブジェクトの項目
+            new Map<String, String> { 'header1' => '',  'value1' => '詳細画面',  'value2' => '編集' }
+        );
+        this.user = new User();
+        addCommandButton('btnSave', new Map<String, String> { 'value' => '保存', 'action' => 'doSave', 'reRender' => 'search_result',  'onComplete' => 'setColSize(false);' });
+    }
+
+    // テスト用アクション１
+/*    public PageReference doCustomAction1() {
+        sampleText = '';
+        for (Id selId : selectedIds) {
+            sampleText += ('[' + selId + ']');
+        }
+        return null;
+    }*/
+    
+    public PageReference doSave() {
+        saveRecords();
+        return null;
+    }
+
+    // 検索処理をオーバーライド
+    public override PageReference doSearch() {
+        
+        // WHERE句は各プログラムで個別に作成
+        // (基本クラス側でクエリを実行する場合、バインド変数は使えない)
+        String conditionExpression = '';
+        String sep = 'where ';
+        if (String.isNotEmpty(searchName)) {
+            conditionExpression += (sep + 'Name like \'%' + searchName + '%\' ');
+            sep = 'and ';
+        }
+        /*
+        if (String.isNotEmpty(searchUserName)) {
+            conditionExpression += (sep + 'UserName like \'%' + searchUserName + '%\' ');
+             sep = 'and ';
+        }
+        */
+        if (user.Idobi__c != null) {
+            String dateName = String.valueOf(user.Idobi__c);
+            conditionExpression += (sep + 'Idobi__c = ' + dateName);
+        }
+        // クエリを実行して結果をセット
+        execQuery(conditionExpression, null, 20);
+
+        return null;
+    }
+
+    public override PageReference doCommand1() {
+        String refId = getRefId();
+        PageReference pageRef = new PageReference('/' + refId);
+        pageRef.setRedirect(true);
+        return pageRef;
+    }
+
+    public override PageReference doCommand2() {
+        String refId = getRefId();
+        PageReference pageRef = new PageReference('/' + refId + '/e');
+        pageRef.setRedirect(true);
+        return pageRef;
+    }
+    
+    public override List<String> getReadonlyFieldList() {
+        return new List<String>{
+            //Schema.SObjectType.User.fields.UserName.getName().toLowerCase()
+        };
+    }
+    
+    public override List<String> getInvalidLinkFieldList() {
+        return new List<String>{
+            Schema.SObjectType.User.fields.Name.getName().toLowerCase()
+        };
+    }
+    
+    public override List<String> getHiddenFieldList() {
+        return new List<String>{
+            Schema.SObjectType.User.fields.ProfileId.getName().toLowerCase()
+        };
+    }
+}

@@ -1,0 +1,430 @@
+<apex:component access="global" allowDML="true" controller="BaseSearchResultController">
+    <apex:attribute access="global" name="result" type="BaseSearchResultWrapper" required="true" assignTo="{!resultWrapper}" description="検索結果" />
+
+    <apex:attribute access="global" name="newButton" type="Boolean" required="false" default="false" description="「新規作成」ボタンを使用する" />
+    <apex:attribute access="global" name="editLink" type="Boolean" required="false" default="false" description="「編集」リンクを使用する" />
+    <apex:attribute access="global" name="deleteLink" type="Boolean" required="false" default="false" description="「削除」リンクを使用する" />
+    <apex:attribute access="global" name="checkbox" type="Boolean" required="false" default="false" assignTo="{!resultWrapper.hasCheckBox}" description="チェックボックスを表示する" />
+    <apex:attribute access="global" name="sortable" type="Boolean" required="false" default="false" assignTo="{!isSortable}" description="ソート機能を有効にする" />
+
+    <style>
+        .resultTable {
+            width: auto;
+        }
+        .resultTable thead, .resultTable tbody {
+            table-layout: fixed;
+            display: block;
+        }
+        .resultTable tbody {
+            height: 38.5em;
+            overflow-y: auto;
+        }
+        .resultTable th, .resultTable td {
+            word-break: keep-all;
+            white-space: nowrap;
+        }
+        .resultTable th {
+            position: relative;
+        }
+        .resultTable td {
+            padding-left: 5px !important;
+            padding-right: 2px !important;
+        }
+        .resultTable th > div:first-child {
+            height: 20px;
+            padding: 0;
+            margin: 0;
+        }
+        .resultTable div.inText {
+            overflow-x: hidden;
+            text-overflow: ellipsis;
+        }
+        .resultTable .chkBox {
+            text-align: center;
+            width: 25px;
+        }
+        .resultTable .cmdBtn {
+            text-align: center;
+            width: auto;
+        }
+        .resultTable .variable > div {
+            width: {!colWidthDef - 8}px;
+        }
+
+        .resultTable .resizable_handle {
+            position: absolute;
+            right: 0;
+            top: 0;
+            width: 0.25rem;
+            height: 100%;
+            background: #0070d2;
+            display: block;
+            cursor: col-resize;
+            opacity: 0;
+            z-index: 9999;
+        }
+        .resultTable .resizable_handle:hover {
+            opacity: 1;
+        }
+        .resultTable .resizable_area {
+            position: absolute;
+            height: 100%;
+            width: 0.75rem;
+            top: 0;
+            right: -0.25rem;
+            background: #0070d2;
+            opacity: 0.25;
+        }
+        .resultTable .resizable_divider {
+            position: absolute;
+            right: 0;
+            height: 24em;
+            width: 1px;
+            background: #0070d2;
+        }
+    </style>
+    <script>
+        var minWidth = {!colWidthDef};
+
+        function setColSize(forInit) {
+            var elmTbl = document.getElementById("{!$Component.resultForm.blk.resultTable}");
+            var infoArray = [];
+
+            var hdRow = elmTbl.getElementsByClassName("headerRow");
+            var arrTh = hdRow[0].getElementsByTagName("th");
+            var dtRows = elmTbl.getElementsByClassName("dataRow");
+            var arrTd = (dtRows.length > 0 ? dtRows[0].getElementsByTagName("td") : null);
+            var maxWidth = (dtRows.length > 0 ? dtRows[0].parentNode.clientWidth : hdRow[0].parentNode.offsetWidth);
+            var pWidth = elmTbl.parentNode.clientWidth - 2;
+            var diffWidth = (dtRows.length > 0 ? hdRow[0].parentNode.offsetWidth - dtRows[0].parentNode.clientWidth : 0);
+            var hdnamList = hdRow[0].querySelectorAll("input[name='hdnam']");
+            var tblWidth = 0;
+
+            if (!forInit) {
+                var elmNameList = document.getElementById("{!$Component.resultForm.blk.nameListJSON}");
+                var elmWidthMap = document.getElementById("{!$Component.resultForm.blk.widthMapJSON}");
+
+                var nmList = JSON.parse(elmNameList.innerHTML);
+                var isSame = false;
+                if (hdnamList.length == nmList.length) {
+                    isSame = true;
+                    for (i = 0; i < nmList.length; i++) {
+                        if (nmList[i] != hdnamList[i].value) {
+                            isSame = false;
+                            break;
+                        }
+                    }
+                }
+
+                if (isSame) {
+                    var wdMap = JSON.parse(elmWidthMap.innerHTML);
+
+                    for (i = arrTh.length - 1; i >= 0; i--) {
+                        var newWidth = wdMap[hdnamList[i].value];
+                        tblWidth += (newWidth + diffWidth + 8);
+                        var elmDiv = arrTh[i].getElementsByTagName("div");
+                        if (elmDiv.length > 0) {
+                            elmDiv[0].style.width = (newWidth + diffWidth) + 'px';
+                        }
+                        for (j = 0; j < dtRows.length; j++) {
+                            var elmDiv = dtRows[j].getElementsByTagName("td")[i].getElementsByTagName("div");
+                            if (elmDiv.length > 0) {
+                                elmDiv[0].style.width = newWidth + 'px';
+                            }
+                        }
+                        diffWidth = 0;
+                    }
+                    elmTbl.querySelector('tbody').style.width = tblWidth + 'px';
+                    return;
+                }
+            }
+
+            if (maxWidth > pWidth) {
+                maxWidth = pWidth;
+            }
+            var arrWidth = new Array(arrTh.length);
+            var sumWidth = 0;
+
+            var cellCount = 0;
+            for (i = 0; i < arrTh.length; i++) {
+                arrWidth[i] = 0;
+                if (isAction(arrTh[i].classList)) {
+                    arrWidth[i] = arrTh[i].querySelector("span").offsetWidth;
+                    if (arrTd != null && arrWidth[i] < arrTd[i].querySelector("span").offsetWidth) {
+                        arrWidth[i] = arrTd[i].querySelector("span").offsetWidth;
+                    }
+                    arrWidth[i] += 10;
+                    maxWidth -= arrWidth[i];
+                } else {
+                    cellCount++;
+                }
+            }
+
+            var cellWidth = Math.max(Math.round(maxWidth / cellCount), minWidth);
+
+            infoArray.length = hdnamList.length;
+            for (i = arrTh.length - 1; i >= 0; i--) {
+                var newWidth = cellWidth - 8;
+                if (isAction(arrTh[i].classList)) {
+                    newWidth = arrWidth[i] - 8;
+                }
+                tblWidth += (newWidth + diffWidth + 8);
+
+                var elmDiv = arrTh[i].getElementsByTagName("div");
+                if (elmDiv.length > 0) {
+                    elmDiv[0].style.width = (newWidth + diffWidth) + 'px';
+                    var colInfo = new Object();
+                    colInfo.name = hdnamList[i].value;
+                    colInfo.width = newWidth;
+                    infoArray[i] = colInfo;
+                }
+                for (j = 0; j < dtRows.length; j++) {
+                    var elmDiv = dtRows[j].getElementsByTagName("td")[i].getElementsByTagName("div");
+                    if (elmDiv.length > 0) {
+                        elmDiv[0].style.width = newWidth + 'px';
+                    }
+                }
+                diffWidth = 0;
+            }
+            elmTbl.querySelector('tbody').style.width = tblWidth + 'px';
+            if (!forInit) {
+                saveColumnWidth(JSON.stringify(infoArray));
+            }
+        }
+
+        function isAction(cList) {
+            return (cList.contains("chkBox") || cList.contains("cmdBtn") || cList.contains("action"));
+        }
+
+        function checkAll() {
+            var elmChk = document.getElementById("{!$Component.resultForm.blk.resultTable.allChk}");
+            var elmTbl = document.getElementById("{!$Component.resultForm.blk.resultTable}");
+            var arrChk = elmTbl.getElementsByClassName("chkItem");
+            for (j = 0; j < arrChk.length; j++) {
+                arrChk[j].checked = elmChk.checked;
+            }
+        }
+
+        var elmTgt = null;
+
+        function startColDrag(elmThis) {
+            elmTgt = elmThis;
+        }
+        function mouseDown() {
+            st_x = event.x;
+        }
+        function mouseMove() {
+            if (elmTgt == null) {
+                return;
+            }
+            elmTgt.style.right = (st_x - event.x) + "px";
+        }
+        function mouseUp() {
+            if (elmTgt == null) {
+                return;
+            }
+            elmTgt.style.right = "0";
+
+            var elmTh = elmTgt
+            do {
+                elmTh = elmTh.parentNode;
+            } while (elmTh.tagName.toLowerCase() != "th");
+
+            var elmTbl = document.getElementById("{!$Component.resultForm.blk.resultTable}");
+            var hdRow = elmTbl.getElementsByClassName("headerRow");
+            var arrTh = hdRow[0].getElementsByTagName("th");
+            var dtRows = elmTbl.getElementsByClassName("dataRow");
+            var arrTd = (dtRows.length > 0 ? dtRows[0].getElementsByTagName("td") : null);
+            var infoArray = [];
+
+            var idx = -1;
+            for (i = 0; i < arrTh.length; i++) {
+                if (arrTh[i].getAttribute("id") == elmTh.getAttribute("id")) {
+                    idx = i;
+                    break;
+                }
+            }
+
+            if (idx >= 0) {
+                var newWidth = elmTh.offsetWidth - 8 + (event.x - st_x);
+                var elmDiv = arrTh[idx].getElementsByTagName("div");
+                var hdnamList = arrTh[idx].querySelectorAll("input[name='hdnam']");
+                if (elmDiv.length > 0) {
+                    elmDiv[0].style.width = newWidth + 'px';
+                    var colInfo = new Object();
+                    colInfo.name = hdnamList[0].value;
+                    colInfo.width = newWidth;
+                    infoArray[0] = colInfo;
+                }
+                for (j = 0; j < dtRows.length; j++) {
+                    var elmDiv = dtRows[j].getElementsByTagName("td")[idx].getElementsByTagName("div");
+                    if (elmDiv.length > 0) {
+                        elmDiv[0].style.width = newWidth + 'px';
+                    }
+                }
+                var elmBdy = elmTbl.querySelector('tbody');
+                elmBdy.style.width = (elmBdy.offsetWidth + event.x - st_x) + 'px';
+            }
+
+            elmTgt = null;
+            saveColumnWidth(JSON.stringify(infoArray));
+        }
+    </script>
+
+    <apex:form id="resultForm" target="_blank">
+        <apex:actionRegion >
+            <apex:actionFunction name="saveColumnWidth" action="{!pageController.saveColumnWidth}" reRender="">
+                <apex:param name="infoArray" assignTo="{!pageController.infoArrayJSON}" value="" />
+            </apex:actionFunction>
+        </apex:actionRegion>
+
+        <apex:pageBlock mode="detail" id="blk">
+            <apex:outputPanel layout="none" rendered="{!NOT(ISNULL(infoMessage))}">
+                <apex:pageMessage severity="warning" strength="1" detail="{!infoMessage}" />
+            </apex:outputPanel>
+            <apex:actionFunction name="ChangeFieldSet" action="{!pageController.ChangeFieldSet}" reRender="resultTable,ftr" onComplete="setColSize(true);"/>
+             <apex:selectList value="{!result.fieldsetName}" multiselect="false" size="1" onchange="ChangeFieldSet()">
+                <apex:selectOptions value="{!result.fieldsetNames}"/>
+            </apex:selectList>
+ 
+            <apex:pageBlockButtons rendered="{!OR(AND(newButton, result.isCreateable), hasButtons)}" location="bottom">
+                <apex:commandButton id="NewButton" rendered="{!AND(newButton, result.isCreateable)}" value="新規{!$ObjectType[result.objName].Label}" 
+                    action="{!IF(result.objName=='User', URLFOR('/lightning/setup/ManageUsers/page?address=/005/e?retURL=/lightning/setup/ManageUsers/home&saveURL=/lightning/setup/ManageUsers/home'), IF(result.objName=='Contact', URLFOR($Action.Contact.NewContact), URLFOR($Action[result.objName].New)))}" />
+                <apex:dynamicComponent rendered="{!hasButtons}" componentValue="{!commandButtonList}"/>
+            </apex:pageBlockButtons>
+
+            <apex:pageBlockTable id="resultTable" value="{!result.recordList}" var="item" rules="cols"
+                     onmouseDown="mouseDown();" onmouseMove="mouseMove();" onmouseUp="mouseUp();" styleClass="resultTable">
+                <apex:column rendered="{!checkbox}" styleClass="chkBox" headerClass="chkBox" style="border-right: 1px solid transparent;">
+					<apex:facet name="header">
+						<apex:outputPanel layout="inline">
+							<apex:inputCheckbox id="allChk" onchange="checkAll();" value="{!allCheck}"/>
+							<input name="hdnam" type="hidden" value="allChk" />
+						</apex:outputPanel>
+					</apex:facet>
+					<div><span><apex:inputCheckbox value="{!result.recordMap[item['Id']].isSelected}" styleClass="chkItem"/></span></div>
+				</apex:column>
+
+				<apex:column rendered="{!OR(AND(editLink, result.isUpdateable), AND(deleteLink, result.isDeletable))}" styleClass="actionColumn" headerClass="action" style="border-right: 1px solid transparent;">
+					<apex:facet name="header">
+						<apex:outputPanel layout="inline">
+							アクション
+							<input name="hdnam" type="hidden" value="action" />
+						</apex:outputPanel>
+					</apex:facet>
+					<apex:outputPanel layout="block">
+						<span>
+							<apex:outputLink value="{!IF(result.objName=='User', URLFOR('/lightning/setup/ManageUsers/page?address=/'+item['Id']+'/e?retURL=/lightning/setup/ManageUsers/home&saveURL=/lightning/setup/ManageUsers/home'), URLFOR($Action[result.objName].edit, item['Id']))}" target="_blank" rendered="{!AND(editLink, result.isUpdateable)}">編集</apex:outputLink>
+							<apex:outputText rendered="{!AND(editLink, result.isUpdateable, deleteLink, result.isDeletable)}" value=" | " />
+							<apex:outputLink value="{!URLFOR($Action[result.objName].delete, item['Id'])}" onclick="if (!confirm('よろしいですか？')) { return false; }" rendered="{!AND(deleteLink, result.isDeletable)}">削除</apex:outputLink>
+						</span>
+					</apex:outputPanel>
+				</apex:column>
+                <apex:repeat value="{!result.fields}" var="field">
+                    <apex:column rendered="{!AND(field.name != 'Id', NOT(field.isCommand), field.isDisplay, !field.isHidden)}" style="border-right: 1px solid transparent;" styleClass="variable" headerClass="variable">
+                        <apex:facet name="header">
+                            <apex:outputPanel layout="block" style="padding-top: 4px;" styleClass="inText">
+                                <apex:outputPanel layout="none" rendered="{!AND(field.isSortable, isSortable)}">
+                                    <apex:commandLink value="{!field.label}" action="{!pageController.doSort}" reRender="resultTable,ftr" onComplete="setColSize(false);">
+                                        <apex:param name="sortColumn" value="{!field.name}"/>
+                                    </apex:commandLink>
+                                </apex:outputPanel>
+                                <apex:outputPanel layout="none" rendered="{!NOT(AND(field.isSortable, isSortable))}">
+                                    <apex:outputText >{!field.label}</apex:outputText>
+                                </apex:outputPanel>
+                                <apex:outputPanel rendered="{!AND(field.isSortable, isSortable)}" style="position: absolute; right: 3px; top: 7px; color: #00007f; font-weight: bold;">
+                                    <apex:outputText value="{!field.sortIcon}"/>
+                                </apex:outputPanel>
+                                <apex:outputPanel styleClass="resizable" rendered="{!result.hasRecords}">
+                                    <span class="resizable_handle" onmousedown="startColDrag(this);">
+                                        <span class="resizable_area"></span>
+                                        <span class="resizable_divider"></span>
+                                    </span>
+                                </apex:outputPanel>
+                                <input name="hdnam" type="hidden" value="{!field.name}" />
+                            </apex:outputPanel>
+                        </apex:facet>
+
+                        <apex:outputPanel layout="none">
+                            <apex:outputPanel layout="block" styleClass="inText">
+                                <apex:inputField rendered="{!AND(field.isOther && !field.isHidden, field.isUpdateable)}" value="{!item[field.name]}" />
+                                <apex:outputField rendered="{!AND(field.isOther && !field.isHidden, !field.isUpdateable)}" value="{!item[field.name]}" />
+                                <apex:outputLink rendered="{!field.isName && !field.isHidden}" value="{!$Site.BaseUrl + '/' + item.Id}">{!item['Name']}</apex:outputLink>
+                                <apex:outputText rendered="{!AND(field.isGeoLocation && !field.isHidden, NOT(AND(ISNULL(item[field.f_latitude]), ISNULL(item[field.f_longitude]))))}" value="{0, number, 0.000}°N {1, number, 0.000}°E">
+                                    <apex:param value="{!item[field.f_latitude]}" />
+                                    <apex:param value="{!item[field.f_longitude]}" />
+                                </apex:outputText>
+                                <apex:outputPanel layout="span" rendered="{!field.isAddress && !field.isHidden}">
+                                    <apex:outputText value="{!item[field.f_country]}" />
+                                    <apex:outputText value="{!item[field.f_postalCode]}" />
+                                    <apex:outputText value="{!item[field.f_state]}" />
+                                    <apex:outputText value="{!item[field.f_city]}" />
+                                    <apex:outputText value="{!item[field.f_street]}" />
+                                </apex:outputPanel>
+                            </apex:outputPanel>
+                        </apex:outputPanel>
+                    </apex:column>
+
+                    <apex:column rendered="{!field.isCommand}" styleClass="cmdBtn" headerClass="cmdBtn" style="border-right: 1px solid transparent;">
+                        <apex:facet name="header">
+                            <apex:outputPanel layout="inline">
+                                <apex:outputText >{!field.label}</apex:outputText>
+                                <input name="hdnam" type="hidden" value="{!IF(field.isLast, 'cmdbtn_2', 'cmdbtn_1')}" />
+                            </apex:outputPanel>
+                        </apex:facet>
+
+                        <apex:outputPanel layout="block">
+                            <span>
+                                <apex:actionRegion >
+                                    <apex:commandButton id="cmdbtn1" value="{!field.name}" action="{!pageController.doCommand1}" rendered="{!NOT(field.isLast)}" />
+                                    <apex:commandButton id="cmdbtn2" value="{!field.name}" action="{!pageController.doCommand2}" rendered="{!field.isLast}" />
+                                    <apex:inputHidden value="{!item.Id}" id="refId"/>
+                                </apex:actionRegion>
+                            </span>
+                        </apex:outputPanel>
+                    </apex:column>
+                </apex:repeat>
+            </apex:pageBlockTable>
+
+            <apex:outputPanel layout="block" style="margin-top: 0.5em;" id="ftr" rendered="{!result.hasRecords}">
+                <apex:outputText style="display: none;" id="nameListJSON" value="{!pageController.colInfo.nameListJSON}" />
+                <apex:outputText style="display: none;" id="widthMapJSON" value="{!pageController.colInfo.widthMapJSON}" />
+                <apex:outputPanel >
+                    <apex:outputText value="{0} / {1}ページ({2} - {3}件目) / 全{4}件">
+                        <apex:param value="{!pageController.curPage}"/>
+                        <apex:param value="{!pageController.maxPage}"/>
+                        <apex:param value="{!pageController.stRow}"/>
+                        <apex:param value="{!pageController.edRow}"/>
+                        <apex:param value="{!pageController.rowCount}"/>
+                    </apex:outputText>
+                </apex:outputPanel>
+                <apex:outputPanel style="margin-left: 15em;" id="naviBtns">
+                    <apex:outputPanel layout="none" rendered="{!AND(pageController.naviBase > 3, pageController.maxPage > 5)}">
+                        <apex:commandButton style="width: 1.65em;" value="<" 
+                                action="{!pageController.movePage}" rerender="resultTable,ftr" onComplete="setColSize(false);">
+                            <apex:param name="pageNum" value="1" />
+                        </apex:commandButton>
+                        <apex:commandButton style="width: 1.65em;" value="..." action="{!pageController.refreshNavi}" rerender="ftr">
+                            <apex:param name="grp" value="prev" />
+                        </apex:commandButton>
+                    </apex:outputPanel>
+                    <apex:repeat value="{!pageController.naviButtons}" var="idx">
+                        <apex:commandButton style="width: 1.65em;" value="{!idx}" disabled="{!idx = pageController.curPage}"
+                                action="{!pageController.movePage}" rerender="resultTable,ftr" onComplete="setColSize(false);">
+                            <apex:param name="pageNum" value="{!idx}" />
+                        </apex:commandButton>
+                    </apex:repeat>
+                    <apex:outputPanel layout="none" rendered="{!AND(pageController.naviBase < pageController.maxPage - 2, pageController.maxPage > 5)}">
+                        <apex:commandButton style="width: 1.65em;" value="..." action="{!pageController.refreshNavi}" rerender="ftr">
+                            <apex:param name="grp" value="next" />
+                        </apex:commandButton>
+                        <apex:commandButton style="width: 1.65em;" value=">" 
+                                action="{!pageController.movePage}" rerender="resultTable,ftr" onComplete="setColSize(false);">
+                            <apex:param name="pageNum" value="{!pageController.maxPage}" />
+                        </apex:commandButton>
+                    </apex:outputPanel>
+                </apex:outputPanel>
+            </apex:outputPanel>
+        </apex:pageBlock>
+    </apex:form>
+</apex:component>

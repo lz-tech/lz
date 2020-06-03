@@ -1,0 +1,14 @@
+<apex:component access="global" allowDML="true" controller="BaseSearchConditonController">
+    <apex:attribute access="global" name="condition" type="BaseSearchConditionWrapper" required="true" assignTo="{!conditionWrapper}" description="ŒŸõðŒ" />
+
+
+            <apex:pageBlockSection columns="2" collapsible="true" showHeader="false">
+                <apex:repeat value="{!conditionWrapper.conditionList}" var="con">
+                    <apex:pageBlockSectionItem >
+                        <apex:outputText value="{!con.conditionLabel}" />
+                        <apex:inputText value="{!con.conditionValue}" />
+                    </apex:pageBlockSectionItem>
+                </apex:repeat>
+            </apex:pageBlockSection>
+</apex:component>
+                                     
