@@ -1,0 +1,84 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+
+<html>
+<head>
+	<title>Untitled</title>
+	<link href="https://cdn.bootcss.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.bootcss.com/bootstrap-datetimepicker/4.17.47/css/bootstrap-datetimepicker.min.css" rel="stylesheet">
+    <script type="text/javascript" src="https://cdn.bootcdn.net/ajax/libs/jquery/3.5.1/jquery.js"></script>
+	<script type="text/javascript" src="https://cdn.bootcss.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+	<script type="text/javascript" src="https://cdn.bootcdn.net/ajax/libs/moment.js/2.26.0/moment-with-locales.js"></script>
+	<script type="text/javascript" src="https://cdn.bootcss.com/bootstrap-datetimepicker/4.17.47/js/bootstrap-datetimepicker.min.js"></script>
+	
+</head>
+
+<body>
+	<div class="row">
+	    <div class='col-sm-6'>
+	        <div class="form-group">
+	            <label>&#36873;&#25321;日期：</label>
+	            <!--指定 date&#26631;&#35760;-->
+	            <div class='input-group date' id='datetimepicker1'>
+	                <input type='text' class="form-control" />
+	                <span class="input-group-addon">
+	                    <span class="glyphicon glyphicon-calendar"></span>
+	                </span>
+	            </div>
+	        </div>
+	    </div> 
+	    <div class='col-sm-6'>
+	        <div class="form-group">
+	            <label>&#36873;&#25321;日期+&#26102;&#38388;：</label>
+	            <!--指定 date&#26631;&#35760;-->
+	            <div class='input-group date' id='datetimepicker2'>
+	                <input id ='date' type='text' class="form-control" />
+	                <span class="input-group-addon">
+	                    <span class="glyphicon glyphicon-calendar"></span>
+	                </span>
+	            </div>
+	        </div>
+	    </div>
+	</div>
+	<button onclick ="checkCookie()" >&#24320;始</button>
+	<!--<a href="C:/Users/881103224/Desktop/html/index.html">TOA</a>-->
+	<script>
+		
+		$(function () {
+		    $('#datetimepicker1').datetimepicker({
+		        format: 'YYYY-MM-DD',
+		        locale: moment.locale('zh-cn')
+		    });
+		  // $('#datetimepicker2').datetimepicker({
+		   //     format: 'YYYY-MM-DD hh:mm:ss',
+		   //     locale: moment.locale('zh-cn')
+		   // });
+		});
+		$('#date').datetimepicker({
+		      format: 'YYYY-MM-DD hh:mm:ss',
+		      locale: moment.locale('zh-cn'),
+		      viewMode: 'days',
+		      //daysOfWeekDisabled: [5,6],//星期天&#38382;&#39064;
+		      calendarWeeks: true,
+		      showTodayButton:true,
+		      showClear:true,
+		      showClose:true
+		    });	
+		function checkCookie(){
+		   var user= document.getElementById('date').value;
+		   var params = "date="+user;
+		   window.location = "C:/Users/881103224/Desktop/html/index.html?"+params;
+		};
+			 
+		/*4.17版本一些可能用得到的方法参数*/
+		/*
+		        showClose:true	//是否&#26174;示&#20851;&#38381; 按&#38062;
+		        /*viewMode: 'days',//天数模&#22359;展示，months&#21017;&#20026;以月展示
+		        daysOfWeekDisabled: false,//星期几 禁止&#36873;&#25321;,参数 [num],多个逗号隔&#24320;
+		        calendarWeeks: false,	//&#26174;示 周 是 今年第几周
+		        toolbarPlacement:'default', //工具&#25670;放的位置，top &#21017;&#20026;上，默&#35748;&#20026;底
+		        showTodayButton:false,	//是否工具&#26639; &#26174;示 直&#36798;今天天数的 按&#38062;，默&#35748;false
+		        showClear:false, //是否 工具&#26639;&#26174;示  清空 &#36755;入框  的按&#38062;。默&#35748;false
+		*/       
+	</script>
+</body>
+</html>
